@@ -3,7 +3,7 @@ name: Deploy Environment - Terraform
 on:
   workflow_dispatch:
     inputs:
-      environmentName:
+      environment_name:
         description: Environment to deploy to
         type: environment
         required: true
@@ -18,6 +18,16 @@ on:
         description: Container tag to deploy
         type: string
         required: true
+
+      requesting_actor:
+        description: Requesting actor
+        type: string
+        required: true
+
+      tracking_issue:
+        description: Tracking issue
+        type: string
+        required: false
 
 jobs:
   deploy_details:

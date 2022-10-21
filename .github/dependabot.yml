@@ -17,7 +17,7 @@ updates:
 
   # Set update schedule for Terraform
   - package-ecosystem: "terraform"
-    directory: "/.demo/terraform"
+    directory: "/terraform"
     schedule:
       # Check for updates to Terraform every month
       interval: "monthly"

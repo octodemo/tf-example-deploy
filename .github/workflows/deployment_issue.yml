@@ -15,7 +15,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     outputs:
-      container: ${{ steps.issue_payload.outputs. }}
+      container_image: ${{ steps.issue_payload.outputs.container_image }}
+      container_image_tag: ${{ steps.issue_payload.outputs.container_image_tag }}
+      environment_name: ${{ steps.issue_payload.outputs.environment_name }}
 
     steps:
       - name: Extract Form Template Data
@@ -43,129 +45,107 @@ jobs:
               const container = `octodemo/${parsedData['container-name']}`
               const version = parsedData.version;
 
-              core.setOutput('container', container);
-              core.setOutput('version', version);
-              core.setOutput('environmentName', environment);
+              core.setOutput('container_image', container);
+              core.setOutput('container_image_tag', version);
+              core.setOutput('environment_name', environment);
 
               core.summary.addHeading('Deployment Request', 3);
               core.sumamry.addTable([
-                ['environment', environment],
-                ['container', container],
-                ['version', version]
+                ['environment_name', environment],
+                ['container_image', container],
+                ['container_image_tag', version]
               ]);
               await core.summary.write()
-
             } catch(err) {
               core.setFailed(`Issue parsing payload data; ${err}`);
             }
 
-  # invoke_deployment:
-  #   name: Invoke deployment workflow
 
-  #   runs-on: ubuntu-22.04
+  invoke_deployment:
+    name: Invoke deployment workflow
 
-  #   needs:
-  #     - extract_request
+    runs-on: ubuntu-22.04
 
-  #   steps:
-  #     - name: Invoke deployment workflow
-  #       uses: actions/github-script@v6
-  #       env:
-  #         demo_payload: ${{ needs.extract_request.outputs.deployment_payload }}
-  #       with:
-  #         github-token: ${{ secrets.actions_token }}
-  #         script: |
-  #           const workflow = '${{ inputs.demo_creation_workflow }}';
-  #           const workflowBranchRef = 'main';
+    needs:
+      - extract_request
 
-  #           let demoPayload;
-  #           try {
-  #             demoPayload = JSON.parse(process.env.demo_payload);
-  #           } catch (err) {
-  #             core.error(`Failed to parse demo payload as valid JSON; ${err.message}`);
-  #           }
+    steps:
+      - name: Get Workflow Temporary Token
+        id: temp_token
+        if: inputs.vulnerability_scanning
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ secrets.application_id }}
+          application_private_key: ${{ secrets.application_private_key }}
 
-  #           if (demoPayload) {
-  #             //TODO need pre-emptive validation on payload and values.
-  #             const actor = context.actor; // The person on the issue
+      - name: Invoke deployment workflow
+        uses: actions/github-script@v6
+        env:
+          container_image: ${{ needs.extract_request.outputs.container_image }}
+          container_image_version: ${{ needs.extract_request.outputs.container_image_version }}
+          environment_name: ${{ needs.extract_request.outputs.environment_name }}
+        with:
+          github-token: ${{ stemps.temp_token.outputs.token }}
+          script: |
+            const workflow = '.github/workflows/terraform_deployment.yml';
+            const workflowBranchRef = 'main';
+            const actor = context.actor; // The person on the issue
+            const workflowInputs = {
+              environment_name: process.env.environment_name,
+              container: process.env.container_image,
+              container_tag: process.env.container_tag,
+              requesting_actor: actor,
+              tracking_issue: context.issue.number,
+            };
 
-  #             const branch = demoPayload['template-branch'];
-  #             const templateRef = (!branch || branch.trim().length === 0) ? 'main' : branch;
+            core.startGroup('Workflow Dispatch');
+            core.info(`Attempting to invoke workflow: ${workflow}`);
+            core.info(`  target repository: ${context.repo.owner}/${context.repo.repo}`);
+            core.info(`  workflow inputs:\n${JSON.stringify(workflowInputs, null, 2)}`);
 
-  #             const workflowInputs = {
-  #               template_owner: '${{ needs.extract_demo_request.outputs.template_repository_owner }}',
-  #               template_repository: '${{ needs.extract_demo_request.outputs.template_repository_repo }}',
-  #               template_ref: templateRef,
-  #               owner: demoPayload['demo-repository-owner'],
-  #               repository: demoPayload['demo-repository-name'],
-  #               communication_issue_id: context.issue ? `${context.issue.number}` : null,
-  #               requesting_actor: actor,
-  #             }
+            const result = await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: workflow,
+              ref: workflowBranchRef,
+              inputs: workflowInputs,
+            });
 
-  #             let customConfig = null;
-  #             const configRegex = /demo-config-(.*)/;
-  #             Object.keys(demoPayload).forEach(key => {
-  #               const match = configRegex.exec(key);
-  #               if (match) {
-  #                 if (!customConfig) {
-  #                   customConfig = {};
-  #                 }
+            core.info(`  invocation result:\n${JSON.stringify(result, null, 2)}`);
+            core.endGroup();
 
-  #                 customConfig[match[1]] = demoPayload[key];
-  #               }
-  #             });
+  update_issue:
+    name: Update tracking issue
+    if: always()
 
-  #             if (customConfig) {
-  #               workflowInputs['demo_configuration'] = `${JSON.stringify(customConfig)}`;
-  #             }
+    # Ignore failures on this as the demo creation has already been invoked
+    continue-on-error: true
 
-  #             core.startGroup('Workflow Dispatch');
-  #             core.info(`Attempting to invoke workflow: ${workflow}`);
-  #             core.info(`  target repository: ${context.repo.owner}/${context.repo.repo}`);
-  #             core.info(`  workflow inputs:\n${JSON.stringify(workflowInputs, null, 2)}`);
+    runs-on: ubuntu-22.04
 
-  #             const result = await github.rest.actions.createWorkflowDispatch({
-  #               ...context.repo,
-  #               workflow_id: workflow,
-  #               ref: workflowBranchRef,
-  #               inputs: workflowInputs,
-  #             });
+    needs:
+      - extract_request
+      - invoke_deployment
 
-  #             core.info(`  invocation result:\n${JSON.stringify(result, null, 2)}`);
-  #             core.endGroup();
-  #           }
+    steps:
+      - name: Provide success issue comment
+        if: ${{ needs.invoke_deployment.result == 'success' }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Deployment to environment started...
 
-  # update_issue:
-  #   name: Update tracking issue
-  #   if: always()
 
-  #   # Ignore failures on this as the demo creation has already been invoked
-  #   continue-on-error: true
+      - name: Provide failure/cancelled issue comment
+        if: ${{ needs.invoke_deployment.result != 'success' }}
+        uses: peter-evans/create-or-update-comment@v2
+        env:
+          workflow_run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            :exclamation: Deployment to environment unsuccessful :boom:
 
-  #   runs-on: ubuntu-22.04
-
-  #   needs:
-  #     - extract_request
-
-  #   steps:
-  #     - name: Provide success issue comment
-  #       if: ${{ needs.invoke_demo_creation_workflow.result == 'success' }}
-  #       uses: peter-evans/create-or-update-comment@v2
-  #       with:
-  #         issue-number: ${{ github.event.issue.number }}
-  #         body: |
-  #           Deployment to environment started...
-
-  #     - name: Provide failure/cancelled issue comment
-  #       if: ${{ needs.invoke_demo_creation_workflow.result != 'success' }}
-  #       uses: peter-evans/create-or-update-comment@v2
-  #       env:
-  #         workflow_run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  #       with:
-  #         issue-number: ${{ github.event.issue.number }}
-  #         body: |
-  #           :exclamation: Deployment to environment unsuccessful :boom:
-
-  #           | Actions Run |
-  #           | ----------- |
-  #           | [Logs](${{ env.workflow_run }}) |
+            | Actions Run |
+            | ----------- |
+            | [Logs](${{ env.workflow_run }}) |
