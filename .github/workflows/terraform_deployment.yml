@@ -90,6 +90,9 @@ jobs:
 
     timeout-minutes: 5
 
+    outputs:
+      url: ${{ steps.clean_environment_url.outputs.url }}
+
     environment:
       name: ${{ needs.deploy_details.outputs.environment_name }}
       url: ${{ steps.clean_environment_url.outputs.url }}
@@ -178,3 +181,34 @@ jobs:
             }
             core.info(`URL = ${result}`);
             core.setOutput('url', result);
+
+
+  post_deploy:
+    runs-on: ubuntu-22.04
+    if: always() && inputs.tracking_issue != ''
+
+    needs:
+      - deploy_to_cloud
+
+    steps:
+      - name: Report Success
+        if: ${{ needs.deploy_to_cloud.result == 'success' }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ inputs.tracking_issue }}
+          body: |
+            Deployment completed successfully: ${{ needs.deploy_to_cloud.outputs.url }}
+
+      - name: Report Failure
+        if: ${{ needs.deploy_to_cloud.result != 'success' }}
+        uses: peter-evans/create-or-update-comment@v2
+        env:
+          workflow_run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          issue-number: ${{ inputs.tracking_issue }}
+          body: |
+            :exclamation: Deployment to environment unsuccessful :boom:
+
+            | Actions Run |
+            | ----------- |
+            | [Logs](${{ env.workflow_run }}) |
