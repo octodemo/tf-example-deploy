@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     outputs:
-      container_image: ${{ steps.issue_payload.outputs.container_image }}
-      container_image_tag: ${{ steps.issue_payload.outputs.container_image_tag }}
-      environment_name: ${{ steps.issue_payload.outputs.environment_name }}
+      container_image: ${{ steps.processed_data.outputs.container_image }}
+      container_image_tag: ${{ steps.processed_data.outputs.container_image_tag }}
+      environment_name: ${{ steps.processed_data.outputs.environment_name }}
 
     steps:
       - name: Extract Form Template Data
@@ -57,7 +57,7 @@ jobs:
                 ['container_image_tag', version]
               ];
               core.summary.addTable(rows);
-              await core.summary.write()
+              await core.summary.write();
             } catch(err) {
               core.setFailed(`Issue parsing payload data; ${err}`);
             }
