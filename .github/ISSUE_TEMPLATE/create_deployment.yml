@@ -1,0 +1,42 @@
+---
+name: Create Terraform Deployment
+title: "Terraform Deployment"
+description: Create a deployment request for using terraform to deploy our container
+labels:
+  - deployment
+assignees:
+  - octodemobot
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Create a Terraform Deployment Request
+
+        Opening this issue will register a deployment request to deploy a specific version of our container to an environment using terraform.
+
+  - type: dropdown
+    attributes:
+      label: ">>>environment<<<"
+      description: The environment to deploy to
+      options:
+        - prod
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: ">>>container-name<<<"
+      description: The name of the container to deploy
+      options:
+        - octodemo-tf-example-deploy
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: ">>>version<<<"
+      description: The version of the container to deploy.
+      placeholder: version tag
+    validations:
+      required: true
