@@ -30,6 +30,21 @@ on:
         required: false
 
 jobs:
+  invocation_details:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Display invocation data
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.startGroup('Inputs');
+            core.info(JSON.stringify(context.payload, null, 2));
+            core.endGroup();
+
+      #TODO update tracking issue with deployment
+
+
   deploy_details:
     name: Define Deployment Details
 
@@ -49,8 +64,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            core.setOutput('container', 'ghcr.io/octodemo/tf-example-deploy-app')
-            core.setOutput('container', '1.0.0-7e452f3e')
+            core.setOutput('container_image', 'ghcr.io/octodemo/tf-example-deploy-app')
+            core.setOutput('container_version', '1.0.0-7e452f3e')
             core.setOutput('environment_name', 'prod');
 
       # Ensure we can authenticate using the same credendtials as Azure
@@ -64,6 +79,7 @@ jobs:
       # Ensure that we can reference the container and the URL is valid before we deploy to Azure
       - name: Pull Container
         run: docker pull ${{ steps.deployment_data.outputs.container_image }}:${{ steps.deployment_data.outputs.container_version }}
+
 
   deploy_to_cloud:
     name: Deploy to Cloud
