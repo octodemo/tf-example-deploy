@@ -93,7 +93,7 @@ jobs:
             const workflowInputs = {
               environment_name: process.env.environment_name,
               container: process.env.container_image,
-              container_tag: process.env.container_tag,
+              container_tag: process.env.container_image_version,
               requesting_actor: actor,
               tracking_issue: `${context.issue.number}`,
             };
