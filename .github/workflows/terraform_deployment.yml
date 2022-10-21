@@ -162,7 +162,7 @@ jobs:
 
       - name: Extract environment URL
         id: clean_environment_url
-        uses: actions/github-script@v3
+        uses: actions/github-script@v6
         env:
           terraform_url: ${{ steps.terraform_output.outputs.stdout }}
         with:
