@@ -25,14 +25,14 @@ data "azurerm_resource_group" "rg" {
 
 data "azurerm_service_plan" "appserviceplan" {
   name                = var.azure_service_plan
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 resource "azurerm_linux_web_app" "webapp" {
   name                  = "webapp-${var.environment_name}-${random_integer.ri.result}"
-  location              = azurerm_resource_group.rg.location
-  resource_group_name   = azurerm_resource_group.rg.name
-  service_plan_id       = azurerm_service_plan.appserviceplan.id
+  location              = data.azurerm_resource_group.rg.location
+  resource_group_name   = data.azurerm_resource_group.rg.name
+  service_plan_id       = data.azurerm_service_plan.appserviceplan.id
 
   site_config {
     application_stack {
