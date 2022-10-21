@@ -1,4 +1,4 @@
-name: Deploy Environment
+name: Deploy Environment - Terraform
 
 on:
   workflow_dispatch:
@@ -54,7 +54,6 @@ jobs:
       # Ensure that we can reference the container and the URL is valid before we deploy to Azure
       - name: Pull Container
         run: docker pull ${{ steps.deployment_data.outputs.container_image }}:${{ steps.deployment_data.outputs.container_version }}
-
 
   deploy_to_cloud:
     name: Deploy to Cloud
