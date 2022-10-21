@@ -4,6 +4,7 @@ on:
   issues:
     types:
       - opened
+      - reopened
 
 jobs:
   extract_request:
@@ -59,7 +60,6 @@ jobs:
             } catch(err) {
               core.setFailed(`Issue parsing payload data; ${err}`);
             }
-
 
   invoke_deployment:
     name: Invoke deployment workflow
@@ -134,7 +134,6 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           body: |
             Deployment to environment started...
-
 
       - name: Provide failure/cancelled issue comment
         if: ${{ needs.invoke_deployment.result != 'success' }}
