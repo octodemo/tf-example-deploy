@@ -75,8 +75,8 @@ jobs:
         id: temp_token
         uses: peter-murray/workflow-application-token-action@v2
         with:
-          application_id: ${{ secrets.application_id }}
-          application_private_key: ${{ secrets.application_private_key }}
+          application_id: ${{ secrets.OCTODEMOBOT_APPLICATION_ID_REPO_AUTOMATION }}
+          application_private_key: ${{ secrets.OCTODEMOBOT_APPLICATION_KEY_REPO_AUTOMATION }}
 
       - name: Invoke deployment workflow
         uses: actions/github-script@v6
