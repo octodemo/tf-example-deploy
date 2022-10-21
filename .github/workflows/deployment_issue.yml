@@ -82,7 +82,7 @@ jobs:
         uses: actions/github-script@v6
         env:
           container_image: ${{ needs.extract_request.outputs.container_image }}
-          container_image_version: ${{ needs.extract_request.outputs.container_image_version }}
+          container_image_version: ${{ needs.extract_request.outputs.container_image_tag }}
           environment_name: ${{ needs.extract_request.outputs.environment_name }}
         with:
           github-token: ${{ steps.temp_token.outputs.token }}
