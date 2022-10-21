@@ -176,5 +176,5 @@ jobs:
             if (regex.test(result)) {
               result = regex.exec(result)[1]
             }
-
+            core.info(`URL = ${result}`);
             core.setOutput('url', result);
