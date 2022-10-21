@@ -50,7 +50,7 @@ jobs:
               core.setOutput('container_image_tag', version);
               core.setOutput('environment_name', environment);
 
-              core.summary.addHeading(':green_dot: Deployment Request', 3);
+              core.summary.addHeading(':green_circle: Deployment Request', 3);
               const rows = [
                 ['environment_name', environment],
                 ['container_image', container],
