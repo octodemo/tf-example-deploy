@@ -41,3 +41,7 @@ resource "azurerm_linux_web_app" "webapp" {
     }
   }
 }
+
+output "website_url" {
+  value = azurerm_linux_web_app.webapp.default_hostname
+}
