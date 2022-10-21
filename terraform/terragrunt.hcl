@@ -1,7 +1,3 @@
-locals {
-    config_vars = jsondecode(file("terraform.tfvars.json"))
-}
-
 remote_state {
     backend         = "${get_env("TF_VAR_state_backend", "azurerm")}"
 
