@@ -34,7 +34,7 @@ jobs:
         id: processed_data
         uses: actions/github-script@v6
         env:
-          payload_data: ${{ steps.issue_payload,outputs.payload }}
+          payload_data: ${{ steps.issue_payload.outputs.payload }}
         with:
           script: |
             const data = process.env.payload_data;
