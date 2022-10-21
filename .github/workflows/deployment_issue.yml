@@ -95,7 +95,7 @@ jobs:
               container: process.env.container_image,
               container_tag: process.env.container_tag,
               requesting_actor: actor,
-              tracking_issue: context.issue.number,
+              tracking_issue: `${context.issue.number}`,
             };
 
             core.startGroup('Workflow Dispatch');
@@ -112,7 +112,6 @@ jobs:
 
             core.info(`  invocation result:\n${JSON.stringify(result, null, 2)}`);
             core.endGroup();
-
 
   update_issue:
     name: Update tracking issue
