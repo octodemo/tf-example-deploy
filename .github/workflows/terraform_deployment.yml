@@ -44,6 +44,7 @@ jobs:
 
       #TODO update tracking issue with deployment
 
+
   deploy_details:
     name: Define Deployment Details
 
@@ -79,6 +80,7 @@ jobs:
       - name: Pull Container
         run: docker pull ${{ steps.deployment_data.outputs.container_image }}:${{ steps.deployment_data.outputs.container_version }}
 
+
   deploy_to_cloud:
     name: Deploy to Cloud
     runs-on: ubuntu-22.04
@@ -95,6 +97,14 @@ jobs:
     env:
       # Directory that contains Terraform HCL to run
       TERRAFORM_WORKING_DIRECTORY: ./terraform
+      ARM_ACCESS_KEY: ${{ secrets.AZURE_TERRAFORM_STORAGE_ACCESS_KEY }}
+
+      TF_VAR_azure_resource_group: ${{ secrets.AZURE_RESOURCE_GROUP_NAME }}
+      TF_VAR_azure_service_plan: ${{ secrets.AZURE_APP_PLAN_NAME }}
+
+      TF_VAR_environment_name: ${{ needs.deploy_details.outputs.environment_name }}
+      TF_VAR_container_image: ${{ needs.deploy_details.outputs.container_image }}
+      TF_VAR_container_tag: ${{ needs.deploy_details.outputs.container_version }}
 
     steps:
       - name: Checkout Sources
@@ -126,10 +136,22 @@ jobs:
         run: terragrunt validate
 
       - name: Terraform - plan
+        env:
+          ARM_USE_MSI: false
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_PLATFORM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_PLATFORM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_PLATFORM_TERRAFORM_SERVICE_PRINCIPAL_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_PLATFORM_TERRAFORM_SERVICE_PRINCIPAL_SECRET }}
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
         run: terragrunt plan
 
       - name: Terraform - apply
+        env:
+          ARM_USE_MSI: false
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_PLATFORM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_PLATFORM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_PLATFORM_TERRAFORM_SERVICE_PRINCIPAL_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_PLATFORM_TERRAFORM_SERVICE_PRINCIPAL_SECRET }}
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
         run: terragrunt apply -auto-approve
 
