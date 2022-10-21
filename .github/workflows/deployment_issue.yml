@@ -113,6 +113,7 @@ jobs:
             core.info(`  invocation result:\n${JSON.stringify(result, null, 2)}`);
             core.endGroup();
 
+
   update_issue:
     name: Update tracking issue
     if: always()

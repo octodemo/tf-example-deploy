@@ -26,7 +26,7 @@ on:
 
       tracking_issue:
         description: Tracking issue
-        type: string
+        type: number
         required: false
 
 jobs:
