@@ -85,7 +85,7 @@ jobs:
           container_image_version: ${{ needs.extract_request.outputs.container_image_version }}
           environment_name: ${{ needs.extract_request.outputs.environment_name }}
         with:
-          github-token: ${{ stemps.temp_token.outputs.token }}
+          github-token: ${{ steps.temp_token.outputs.token }}
           script: |
             const workflow = '.github/workflows/terraform_deployment.yml';
             const workflowBranchRef = 'main';
