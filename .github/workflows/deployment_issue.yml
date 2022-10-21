@@ -42,7 +42,7 @@ jobs:
             try {
               const parsedData = JSON.parse(data);
 
-              const environment = data.environment;
+              const environment = parsedData.environment;
               const container = `octodemo/${parsedData['container-name']}`
               const version = parsedData.version;
 
@@ -50,12 +50,13 @@ jobs:
               core.setOutput('container_image_tag', version);
               core.setOutput('environment_name', environment);
 
-              core.summary.addHeading('Deployment Request', 3);
-              core.summary.addTable([
+              core.summary.addHeading(':green_dot: Deployment Request', 3);
+              const rows = [
                 ['environment_name', environment],
                 ['container_image', container],
                 ['container_image_tag', version]
-              ]);
+              ];
+              core.summary.addTable(rows);
               await core.summary.write()
             } catch(err) {
               core.setFailed(`Issue parsing payload data; ${err}`);
