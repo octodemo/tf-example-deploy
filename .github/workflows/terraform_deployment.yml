@@ -1,0 +1,135 @@
+name: Deploy Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: Environment to deploy to
+        type: environment
+        required: true
+
+      container:
+        description: Container to deploy
+        type: string
+        default: octodemo/tf-example-deploy
+        required: true
+
+      container_tag:
+        description: Container tag to deploy
+        type: string
+        required: true
+
+jobs:
+  deploy_details:
+    name: Define Deployment Details
+
+    runs-on: ubuntu-22.04
+
+    outputs:
+      environment_name: ${{ steps.deployment_data.outputs.environment_name }}
+      container_image: ${{ steps.deployment_data.outputs.container_image }}
+      container_version: ${{ steps.deployment_data.outputs.container_version }}
+
+    steps:
+      - name: Checkout Sources
+        uses: actions/checkout@v3
+
+      - name: Extract Deployment Details and Report Deployment in Progress
+        id: deployment_data
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setOutput('container', 'ghcr.io/octodemo/tf-example-deploy-app')
+            core.setOutput('container', '1.0.0-7e452f3e')
+            core.setOutput('environment_name', 'prod');
+
+      # Ensure we can authenticate using the same credendtials as Azure
+      - name: Authenticate with Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "<token>"
+          password: ${{ secrets.OCTODEMOBOT_GHPR_TOKEN }}
+
+      # Ensure that we can reference the container and the URL is valid before we deploy to Azure
+      - name: Pull Container
+        run: docker pull ${{ steps.deployment_data.outputs.container_image }}:${{ steps.deployment_data.outputs.container_version }}
+
+
+  deploy_to_cloud:
+    name: Deploy to Cloud
+    runs-on: ubuntu-22.04
+
+    needs:
+      - deploy_details
+
+    timeout-minutes: 5
+
+    environment:
+      name: ${{ needs.deploy_details.outputs.environment_name }}
+      url: ${{ steps.clean_environment_url.outputs.url }}
+
+    env:
+      # Directory that contains Terraform HCL to run
+      TERRAFORM_WORKING_DIRECTORY: ./terraform
+
+    steps:
+      - name: Checkout Sources
+        uses: actions/checkout@v3
+
+      - name: HashiCorp - Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.3.3
+          terraform_wrapper: true
+
+      - name: Setup Terragrunt
+        uses: peter-murray/terragrunt-github-action@v1.0.0
+        with:
+          terragrunt_version: 0.28.7
+
+      # Can use OIDC for this
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.DEMO_AZURE_SERVICE_PROVIDER_CREDENTIALS }}
+
+      - name: Terraform - init
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terragrunt init
+
+      - name: Terraform - validate
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terragrunt validate
+
+      - name: Terraform - plan
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terragrunt plan
+
+      - name: Terraform - apply
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terragrunt apply -auto-approve
+
+      - name: Get Website URL from Terrafom State
+        id: terraform_output
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+        run: terraform output -json website_url
+
+      - name: Extract environment URL
+        id: clean_environment_url
+        uses: actions/github-script@v3
+        env:
+          terraform_url: ${{ steps.terraform_output.outputs.stdout }}
+        with:
+          script: |
+            // Terraform has started putting out quoted strings now, so we have to clean them up
+
+            const data = process.env.terraform_url;
+            let result = data.trim();
+
+            const regex = /^"(.*)"$/;
+            if (regex.test(result)) {
+              result = regex.exec(result)[1]
+            }
+
+            core.setOutput('url', result);
