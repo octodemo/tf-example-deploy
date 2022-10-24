@@ -48,4 +48,6 @@ This workflow listens for issues being opened or reopeneded that meet the requir
 If these conditions are met, then we assume that the issue has come from our issue template (which was used to collect user information in a specific format to make parsing the data possible).
 If this is the case using markletplace actions we extract the data and then report the extracted data as summary, and if successful, then invoke a deployment using the `terraform_deployment.yml` workflow above.
 
+![Issue Workflow Results](https://user-images.githubusercontent.com/681306/197496245-69db4138-6755-44b7-9e05-0bb096abf556.png)
+
 Note that for this to be possible, you cannot use the `${{ secrets.GITHUB_TOKEN }}` as that lacks the ability to chain Actions workflows. For this we are using a GitHub Application to obtain a temporary token. See https://github.com/peter-murray/workflow-application-token-action for more details.
