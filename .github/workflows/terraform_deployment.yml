@@ -69,8 +69,8 @@ jobs:
           environment_name: ${{ inputs.environment_name }}
         with:
           script: |
-            core.setOutput('container_image', 'ghcr.io/${process.env.container_name}')
-            core.setOutput('container_version', process.env.container_tag)
+            core.setOutput('container_image', `ghcr.io/${process.env.container_name}`);
+            core.setOutput('container_version', process.env.container_tag);
             core.setOutput('environment_name', process.env.environment_name);
 
       # Ensure we can authenticate using the same credendtials as Azure
