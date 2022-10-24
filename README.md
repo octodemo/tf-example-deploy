@@ -22,7 +22,7 @@ It is strongly advised that you would use credentials and even a ACR to host the
 
 There are a few supporting workflows in this reposiotry but we are focusing only on the deployment with terraform aspects in this example.
 
-#### terraform_deployment.yml (./.github/workflows/terraform_deployment.yml)
+#### [terraform_deployment.yml](./.github/workflows/terraform_deployment.yml)
 
 This workflow uses a `workflow_dispatch` event as a trigger to provide a manual workflow trigger with useer inputs. It can also be triggered programmatically via the API, which is what is done from the [deployment_issue.yml](./.github/workflows/deployment_issue.yml) workflow.
 
