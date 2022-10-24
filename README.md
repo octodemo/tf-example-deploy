@@ -38,6 +38,8 @@ The workflow consists of three steps"
 
 4. `post_deploy`: optional post reporting steps to update infomration on the tracking issue reporting the success or failure
 
+![workflow](https://user-images.githubusercontent.com/681306/197511177-5fed1b4f-8ef5-4259-bb6e-5e01101a3ced.png)
+
 
 #### [deployment_issue.yml](./.github/workflows/deployment_issue.yml)
 
