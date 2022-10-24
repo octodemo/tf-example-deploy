@@ -6,66 +6,46 @@ to be built into a container and then available to be deployed as an Azure Web A
 ![bookstore](https://user-images.githubusercontent.com/681306/114581130-5e2d4b00-9c77-11eb-837b-4efaefa29e39.png)
 
 
-The Workflow files in this repository provide the following features:
 
-* Pull Requests code is built and tested using Maven and a Docker container published
-* Code QL scanning performed on each push
-* Each time a container is built, scanning of the containers will be performed and reported back in the security findings
-* Ability to deploy from a PR into `review` environment using labels:
-    - `deploy to test`
-    - `deploy to qa`
-    - `deploy to staging`
-* Azure review environments are destroyed once PR is closed (using Ansible triggered from deployment transitions)
-* Any commit to the default branch `main` will result in the `prod` Azure web application being updated to the latest code (Continuous Delivery)
+## Terraform Deployment
 
-For a step-by-step guide see: [Bookstore Demo](https://github.com/github/solutions-engineering/blob/master/guides/demo/end-to-end-demos/bookstore-demo.md)
+Terraform is provided to deploy the application to an Azure web app for this repository in the [terraform](./terraform) directory, it uses
+Terragrunt to perform an injection of a Remote state backend for Azure to store our state for each deployment.
+
+The terraform deployment will look up the existing resource group and app plan and then deploy the specified container in to a web app for access from the internet. The containers are expected to
+come from the GHCR in this example and are public, so that we do not have to deal with credentials in the example for this.
+
+It is strongly advised that you would use credentials and even a ACR to host these containers closer to the deployment so that you can control access in a consitent system as the deployment. GHCR is better suited for staging in this example.
 
 
-## Running the Web Application locally
+### GitHub Actions Workflows
 
-You can run the web application locally using Maven for development purposes, which can be done either directly if you
-have Maven and a JDK installed, or inside a container that has Maven and JDK installed.
+There are a few supporting workflows in this reposiotry but we are focusing only on the deployment with terraform aspects in this example.
 
+#### terraform_deployment.yml (./.github/workflows/terraform_deployment.yml)
 
-### GitHub Codespaces
+This workflow uses a `workflow_dispatch` event as a trigger to provide a manual workflow trigger with useer inputs. It can also be triggered programmatically via the API, which is what is done from the [deployment_issue.yml](./.github/workflows/deployment_issue.yml) workflow.
 
-This repository is configured with GitHub Codespaces to make it easy to start with a development environment fully configured.
+The inputs for this workflow define the environment name and the container, as well as some extra metadata that is relevant for tracking and reporting (user/actor and an issue to report status to).
 
-The container used for the development environment is available from https://github.com/octodemo/container-java-development and is publically available.
-There are multiple versions of this, all with the tags providing a specific combination of tools for various cloud vendors. By default you will get a
-container with:
-* Maven 3.6.3 or later
-* JDK 11
-* Azure CLI tools
+The workflow consists of three steps"
 
+1. `invocation_details`: reporting of the inputs and initial optional reporting would occur here.
 
-### Running locally:
-To build the software run the following command:
+2. `deploy_details`: using the inputs and validating the parameters and using them to check for the existence of the container image specified, failing if not available
 
-```bash
-$ mvn package
-```
+3. `deploy_to_cloud`: using the validated parameters, target an environment (gaining access to the secrets specific to that environment along with protection rules, like required reviewers) and then perform the deployment of the container as a web app, all using Terraform. Upon successful deployment also register that URL with the environment, so that everything is linked up in GitHub
 
-This will generate a jar file at `target/bookstore-v2-1.0.0-SNAPSHOT.jar` directory that when run with the command `java -jar target/bookstore-v2-1.0.0-SNAPSHOT.jar` will run the jetty web server.
-The logs from the jar file should report the url to access the web server on, which is port `8080` by default.
+4. `post_deploy`: optional post reporting steps to update infomration on the tracking issue reporting the success or failure
 
 
-### Running in a Docker container:
+#### [deployment_issue.yml](./.github/workflows/deployment_issue.yml)
 
-The Codespace is configured to build and execute the container as a tasks.
+This workflow listens for issues being opened or reopeneded that meet the requirements of:
+* issue has a `deployment` label
+* issue is assigned to our automation user `octodemobot`
 
-* `docker: build container` will build the java project and then the container for you, prompting for details along the way
-* `docker: run container` will allow you to run the container that you built allowing you to select the port that is bound to (`8080` by default).
+If these conditions are met, then we assume that the issue has come from our issue template (which was used to collect user information in a specific format to make parsing the data possible).
+If this is the case using markletplace actions we extract the data and then report the extracted data as summary, and if successful, then invoke a deployment using the `terraform_deployment.yml` workflow above.
 
-Building and running the container locally without the tasks in GitHub Codespaces can be done using the following;
-
-* `mvn package`
-* `docker build . --build-arg VERSION=1.0.0-SNAPSHOT --tag bookstore:latest` (update to the correct version that mvn package will build for you)
-* `docker run -p 8080:8080 bookstore:latest` to execute the container and bind to port `8080` to serve requests from
-
-### Flow diagram
-
-The flow diagram below depicts the Actions' workflows that are pre-configured, the events that trigger each of them and the different Azure environments that are spinned up during the demo. 
-
-![Azure_Bookstore_Demo drawio](https://user-images.githubusercontent.com/3329307/140162304-a72882b5-291a-4a6c-b43f-957b9a2a268c.png)
-
+Note that for this to be possible, you cannot use the `${{ secrets.GITHUB_TOKEN }}` as that lacks the ability to chain Actions workflows. For this we are using a GitHub Application to obtain a temporary token. See https://github.com/peter-murray/workflow-application-token-action for more details.

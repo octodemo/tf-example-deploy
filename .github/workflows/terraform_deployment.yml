@@ -11,12 +11,13 @@ on:
       container:
         description: Container to deploy
         type: string
-        default: octodemo/tf-example-deploy
+        default: octodemo/tf-example-deploy-app
         required: true
 
       container_tag:
         description: Container tag to deploy
         type: string
+        default: '1.0.0-7e452f3e'
         required: true
 
       requesting_actor:
@@ -62,11 +63,15 @@ jobs:
       - name: Extract Deployment Details and Report Deployment in Progress
         id: deployment_data
         uses: actions/github-script@v6
+        env:
+          container_name: ${{ inputs.container }}
+          container_tag: ${{ inputs.container_tag }}
+          environment_name: ${{ inputs.environment_name }}
         with:
           script: |
-            core.setOutput('container_image', 'ghcr.io/octodemo/tf-example-deploy-app')
-            core.setOutput('container_version', '1.0.0-7e452f3e')
-            core.setOutput('environment_name', 'prod');
+            core.setOutput('container_image', 'ghcr.io/${process.env.container_name}')
+            core.setOutput('container_version', process.env.container_tag)
+            core.setOutput('environment_name', 'process.env.environment_name);
 
       # Ensure we can authenticate using the same credendtials as Azure
       - name: Authenticate with Container Registry
