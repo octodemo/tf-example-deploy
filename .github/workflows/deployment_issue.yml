@@ -43,7 +43,7 @@ jobs:
               const parsedData = JSON.parse(data);
 
               const environment = parsedData.environment;
-              const container = `octodemo/${parsedData['container-name']}`
+              const container = parsedData['container-name'];
               const version = parsedData.version;
 
               core.setOutput('container_image', container);
